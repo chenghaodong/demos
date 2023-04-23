@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>照片拼接logo</title>
+  <style>
+    html, body, .box-3d, .box-3d-item, .logos {
+      margin: 0;
+      height: 100%;
+      width: 100%;
+      padding: 0;
+      overflow: hidden;
+    }
+    .box-3d {
+      overflow: hidden; width: 1174px; height: 961px; perspective: 1320.16px;
+    }
+    .box-3d-item{
+      transform-style: preserve-3d; width: 1174px; height: 961px; transform: translateZ(1320.16px) matrix3d(1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 1, 0, 0, 0, -2519.76, 1) translate(587px, 480.5px);
+    }
+    .logos, #canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: block;
+    }
+    #canvas{
+      display: none;
+    }
+
+    .mask {
+      -webkit-mask: url(./img/nike.png) no-repeat;
+      display: block;
+      mask: url(./img/nike.png) no-repeat;
+      -webkit-mask-size: 100% 100%;
+      mask-size: 100% 100%;
+    }
+    .image {
+      position: absolute;
+      float: left;
+    }
+
+  </style>
+</head>
+<body>
+  <video data-v-400d0a28="" id="hudong-background-video" crossorigin="anonymous" webkit-playsinline="" autoplay="autoplay" muted="muted" loop="loop" class="background-video"><source data-v-400d0a28="" src="https://res.sessionhd.newstartjx.com/yjhdv3/20211022/59884ddb02e24c6da7a44849cc57d6ef.mp4" type="video/mp4; codecs=&quot;avc1.42E01E, mp4a.40.2&quot;"></video>
+  <!-- <div id="logo-container">唱歌</div> -->
+  <canvas id="canvas" width="100%" height="100%"></canvas>
+  <!-- <div class="box-3d">
+    <div class="box-3d-item">
+      <div id="logos" class="logos"></div>
+    </div>
+  </div> -->
+  <div id="logos" class="logos"></div>
+  <script>
+    const maxWidth = window.innerWidth; // 获取视窗宽度
+    const maxHeight = window.innerHeight; // 获取视窗高度
+    const size = 88; // 设置栅格大小
+    const space = 1; // 设置相片间隙
+    const points = []; // 坐标数组
+    const canvas = document.querySelector("canvas"); // 拿到canvas实例
+    canvas.width = maxWidth; // 设置canvas宽度 不能使用canvas.style.width来设置，会造成内容拉伸
+    canvas.height = maxHeight; // 设置canvas高度
+    const ctx = canvas.getContext("2d"); // 获取canvas上下文，这边获取的是二维绘图，还有一个3D内容 "webgl"
+
+    let img = new Image(); // 创建图片实例
+    img.src = "./img/nike.png"; // 获取设置图片url
+    let w = maxWidth; // 设置临时宽度，后边给绘制图片的时候会用到
+    let h = 0; // 设置临时高度
+    console.time("加载logo耗时");
+    img.onload = () => {
+      // img 设置 url 后会立即加载，加载完成后触发 onload 事件
+      // 图片加载完成
+      // h = (w / img.width) * img.height; // 计算图片高度
+      h = maxHeight;
+      ctx.drawImage(img, 0, 0, w, h); // 绘制图片从(0,0)坐标，w为绘制的图片高度，h为绘制的图片高度
+      // 开始识别
+      for (let x = 0; x <= w - 10; x += size + space) {
+        // x轴开始循环 因为我需要有1像素的间隙所以是 size+space ，如果不需要间隙则 +=size 即可
+        for (let y = 0; y <= h - 10; y += size + space) {
+          // y轴开始循环
+          let color = ctx.getImageData(x, y, size, size).data; // 识别区块内容会 一个像素内返回RGBA四个参数
+          let count = 0; // 设置计数器
+          // 以4个一组开始循环
+          for (let i = 0; i < color.length; i += 4) {
+            // [color[i], color[i + 1], color[i + 2], color[i + 3] // 分别是 r g b a
+            // 如果区块中有颜色内容则 count++，我这边识别的是黑色内容
+            if (color[i + 3] !== 0) {
+              count++;
+            }
+          }
+          // 颜色比例超过10%则记录，其实50%也可以，但是会出现 特殊情况1 的问题，下边会提到，但是内容会相对粗一些
+          // 超过75% 显示当前图片
+          if (count >= size * size * 1) {
+            points.push({ x: x, y: y, s: size}); // 添加到坐标数组
+          } else {
+            // 分为四组
+            const halfArr = [{x: x, y: y}, {x: x + size / 2, y: y}, {x: x, y: y + size / 2}, {x: x + size / 2, y: y + size / 2}]
+            for (var j = 0; j < halfArr.length; j++) {
+              const count = getPoint(halfArr[j], 2);
+              if (count >= size / 2 * size / 2 * 0.75) {
+                points.push({ x: halfArr[j].x, y: halfArr[j].y, s: size / 2});
+              } else {// 分为四组
+                const fourArr = [{x: halfArr[j].x, y: halfArr[j].y}, {x: halfArr[j].x + size / 4, y: halfArr[j].y}, {x: halfArr[j].x, y: halfArr[j].y + size / 4}, {x: halfArr[j].x + size / 4, y: halfArr[j].y + size / 4}]
+                for (var k = 0; k < fourArr.length; k++) {
+                  const count = getPoint(fourArr[k], 4);
+                  if (count >= size / 4 * size / 4 * 0.5) {
+                    points.push({ x: fourArr[k].x, y: fourArr[k].y, s: size / 4});
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      function getPoint(point, fenmu) {
+        let color = ctx.getImageData(point.x, point.y, size / fenmu, size / fenmu).data; // 识别区块内容会 一个像素内返回RGBA四个参数
+        let count = 0; // 设置计数器
+        // 以4个一组开始循环
+        for (let i = 0; i < color.length; i += 4) {
+          // [color[i], color[i + 1], color[i + 2], color[i + 3] // 分别是 r g b a
+          // 如果区块中有颜色内容则 count++，我这边识别的是黑色内容
+          if (color[i + 3] !== 0) {
+            count++;
+          }
+        }
+        return count;
+      }
+      // ctx.clearRect(0, 0, maxWidth, maxHeight); // 清除绘制的图片
+      ctx.fillStyle = "rgba(255,0,0,.55)"; // 设置填充色
+      var imgs = [];
+      // 遍历坐标数组内的所有数据
+      points.forEach((point, index) => {
+        let fillimg = new Image();
+        fillimg.src = `./img/${parseInt(Math.random() * 21 - 1)}.jpg`;
+        fillimg.onload = () => {
+          imgs.push(fillimg);
+          if (imgs.length === points.length) {
+            console.timeEnd("加载logo耗时");
+            loadAnimation(imgs, points);
+          }
+        }
+      });
+      // 加载logos
+      var logos = document.querySelector('#logos');
+      function loadAnimation(imgs, points) {
+        imgs = imgs.sort(() => Math.random() - .5);
+        // 创建图片元素并添加到页面中
+        for (let i = 0; i < imgs.length; i++) {
+          const image = imgs[i];
+          image.className = 'image';
+          // 随机设置图片的位置
+          const random = randomDirection();
+          const x = random.x;
+          const y = random.y;
+          const rotate = parseInt(Math.random() * 180);
+          const scale = Math.random().toFixed(1);
+          const rotateX = parseInt(Math.random() * 1000);
+          const rotateY = parseInt(Math.random() * 1000);
+          const rotateZ = parseInt(Math.random() * 1000);
+          image.style.transform = `translate3d(${x}px, ${y}px, 0) rotate3d(${rotateX}, ${rotateY}, ${rotateZ}, ${rotate}deg) scale(${scale})`;
+          image.style.transition = "all 0.7s ease-in-out";
+          image.style.width = points[i].s + 'px';
+          image.style.height = points[i].s + 'px';
+          logos.appendChild(image);
+          // 外面飞入
+          setTimeout(() => {
+            const inX = parseInt(Math.random() * maxWidth);
+            const inY = parseInt(Math.random() * maxHeight);
+            const inZ = parseInt(Math.random() * 1000);
+
+            image.style.transform = `translate3d(${inX}px, ${inY}px, ${inZ}px) rotate3d(${rotateX}, ${rotateY}, ${rotateZ}, ${rotate}deg) scale(${scale})`;
+            // 将图片飞入到logo容器中
+            setTimeout(() => {
+              image.style.transition = "all 3s ease-in-out";
+              image.style.transform = `translate3d(${points[i].x}px,${points[i].y}px, 0) rotate3d(0,0,0, 0deg) scale(1)`;
+              // setTimeout(() => {
+              //   ctx.drawImage(image, points[i].x, points[i].y, size, size);
+              // }, 2900);
+              setTimeout(() => {
+                logos.classList.add("mask");
+                setTimeout(() => {
+                  logos.style.transition = "all 5s ease-in-out";
+                  logos.style.transform = "rotate3d(0,50,0, 360deg)"
+                }, 3000);
+              }, 3000);
+            }, 1000);
+          }, 1000);
+        }
+      }
+      function randomDirection() {
+        var direction = [
+          { // 上面
+            x: (Math.random() * maxWidth),
+            y: (-0.2 * maxHeight),
+          },
+          { // 右边
+            x: (1.2 * maxWidth),
+            y: (Math.random() * maxHeight),
+          },
+          { // 下面
+            x: (Math.random() * maxWidth),
+            y: (1.2 * maxHeight),
+          },
+          { // 左边
+            x: (-0.2 * maxWidth),
+            y: (Math.random() * maxHeight),
+          }
+        ];
+        return direction[parseInt(Math.random() * 4)];
+      }
+    };
+  </script>
+</body>
+</html>

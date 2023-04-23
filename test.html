@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+    }
+    .curr{
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+    .curr {
+      -webkit-mask: url(./img/nike.png) no-repeat;
+      display: inline-block;
+      background-color: #f4615c;
+      mask: url(./img/nike.png) no-repeat;
+      -webkit-mask-size: 100% 100%;
+      mask-size: 100% 100%;
+    }
+    .image {
+      position: relative;
+      width: 100px;
+      height: 100px;
+      background-size: cover;
+      transition: all 1s ease-in-out;
+      float: left;
+    }
+    body >.image {
+      position: absolute;
+    }
+  </style>
+</head>
+<body>
+  <div class="curr" id="logo-container">
+  </div>
+  <script>
+     // 储存所有的图片链接
+     const imageUrls = [
+      'https://picsum.photos/100/100?random=1',
+      'https://picsum.photos/100/100?random=2',
+      'https://picsum.photos/100/100?random=3',
+      // 其他47个图片链接
+    ];
+
+    // 获取logo容器元素
+    const logoContainer = document.querySelector('#logo-container');
+
+    // 创建图片元素并添加到页面中
+    for (let i = 0; i < 200; i++) {
+      const image = document.createElement('div');
+      image.className = 'image';
+      image.style.backgroundImage = `url('https://picsum.photos/100/100?random=${i}')`;
+      document.body.appendChild(image);
+
+      // 随机设置图片的位置
+      const x = Math.random() * (window.innerWidth - 100);
+      const y = Math.random() * (window.innerHeight - 100);
+      image.style.left = `${x}px`;
+      image.style.top = `${y}px`;
+
+      // 将图片飞入到logo容器中
+      setTimeout(() => {
+        const logoRect = logoContainer.getBoundingClientRect();
+        const x = logoRect.left + logoRect.width / 2 - 50;
+        const y = logoRect.top + logoRect.height / 2 - 50;
+        image.style.left = `${x}px`;
+        image.style.top = `${y}px`;
+        setTimeout(() => {
+          image.style.left = `0px`;
+          image.style.top = `0px`;
+          document.body.removeChild(image);
+          logoContainer.appendChild(image);
+        }, 2000);
+      }, i * 50);
+    }
+  </script>
+</body>
+</html>
