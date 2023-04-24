@@ -26,11 +26,11 @@
 
 <body>
   <div class="page page-laser-to-text">
-    <canvas id="canvas"></canvas>
+    <canvas id="laserCanvas"></canvas>
   </div>
   <script>
     (function(){
-      let canvas, ctx, w, h, laser, text, logo, particles, input, step = 0, isEnd = false;
+      let laserCanvas, ctx, w, h, laser, text, logo, particles, input, step = 0, isEnd = false;
 
       function Laser(options) {
         options = options || {};
@@ -90,7 +90,6 @@
         ctx.lineWidth = 1;
         ctx.strokeStyle = '#d4e4fb';
         ctx.strokeStyle = `hsla(${Math.sin(step / 30) * 120 + 50},${90}%,${70}%,1)`
-        console.log(iterations)
         for (i = 1; i < iterations.length; i++) {
           ctx.lineTo(iterations[i].x, iterations[i].y);
         }
@@ -184,79 +183,17 @@
           this.sparks.forEach(s => s.render(ctx));
         };
       }
-
-      function Text(options) {
-        options = options || {};
-        const pool = document.createElement('canvas');
-        const buffer = pool.getContext('2d');
-        pool.width = w;
-        buffer.fillStyle = 'rgba(0,0,0, 0)';
-        buffer.fillRect(0, 0, pool.width, pool.height);
-
-        this.size = options.size || 100;
-        this.copy = (options.copy || `Hello!`) + ' ';
-        this.color = options.color || '#fecd96';
-        this.delay = options.delay || 4;
-        this.basedelay = this.delay;
-        buffer.font = `${this.size}px Comic Sans MS`;
-        this.bound = buffer.measureText(this.copy);
-        this.bound.height = this.size * 1.5;
-        this.x = options.x || w * 0.5 - this.bound.width * 0.5;
-        this.y = options.y || h * 0.5 - this.size * 0.5;
-
-        // buffer.strokeStyle = this.color;
-        // buffer.strokeText(this.copy, 0, this.bound.height * 0.8);
-        buffer.fillStyle = this.color;
-        buffer.fillText(this.copy, 0, this.bound.height * 0.8);
-        this.data = buffer.getImageData(0, 0, this.bound.width, this.bound.height);
-        this.index = 0;
-
-        this.update = function () {
-          if (this.index >= this.bound.width) {
-            this.index = 0;
-            return;
-          }
-          const data = this.data.data;
-          for (let i = this.index * 4; i < data.length; i += 4 * this.data.width) {
-            const bitmap = data[i] + data[i + 1] + data[i + 2] + data[i + 3];
-            if (bitmap > 255 && Math.random() > 0.86) {
-              const x = this.x + this.index;
-              const y = this.y + i / this.bound.width / 4;
-              laser.push(new Laser({
-                x: x,
-                y: y
-              }));
-
-              Math.random() > 0.7 && particles.push(new Particles({
-                x: x,
-                y: y
-              }));
-
-            }
-          }
-          this.delay-- < 0 && this.index++ && (this.delay += this.basedelay);
-        };
-
-        this.render = function (ctx) {
-          ctx.putImageData(this.data, this.x, this.y, 0, 0, this.index, this.bound.height);
-        };
-      }
-
       function Img(url) {
         const imgCanvas = document.createElement('canvas');
         const ctxx = imgCanvas.getContext('2d');
         imgCanvas.width = w;
         imgCanvas.height = h;
-        // imgCanvas.fillStyle = 'red';
-        // document.body.appendChild(imgCanvas);
         let img = new Image(); // 创建图片实例
         img.src = url; // 获取设置图片url
         let maxWidth = w; // 设置临时宽度，后边给绘制图片的时候会用到
         let maxHeight = 0; // 设置临时高度
         this.delay = 1;
         this.basedelay = this.delay;
-        // document.body.append(imgCanvas);
-        // console.time("加载logo耗时");
         this.data = [];
         this.isReady = false;
         this.size = 100;
@@ -265,12 +202,9 @@
           this.isReady = true;
           maxHeight = h;
           ctxx.drawImage(img, 0, 0, maxWidth, maxHeight);
-          // console.log(img.width, img.height);
           this.data = ctxx.getImageData(0, 0, maxWidth, maxHeight);
-          // console.log(this.data);
           this.x = 0;
           this.y = 0;
-          // console.timeEnd("加载logo耗时");
         }
         this.update = function () {
           if (this.index >= imgCanvas.width) {
@@ -316,7 +250,6 @@
 
       function update() {
         if (logo.isReady) {
-          // text.update();
           logo.update();
           laser.forEach((l, i) => l.update(i, laser));
           particles.forEach(p => p.update());
@@ -325,54 +258,26 @@
       }
 
       function render() {
-        // ctx.globalCompositeOperation = 'source-over';
-        // ctx.globalAlpha = 0.9;
-        ctx.fillStyle = 'blue';
+        // ctx.fillStyle = 'blue';
         ctx.fillRect(0, 0, w, h);
-        //
-        // ctx.globalCompositeOperation = 'screen';
         if (logo.isReady) {
-          // text.render(ctx);
           logo.render(ctx);
           laser.forEach(l => l.render(ctx));
           particles.forEach(p => p.render(ctx));
         }
       }
 
-      (function () {
-        //
-        canvas = document.getElementById('canvas');
-        input = document.getElementById('input');
-        ctx = canvas.getContext('2d');
-        w = window.innerWidth;
-        h = window.innerHeight;
-        canvas.width = w;
-        canvas.height = h;
-        laser = [];
-        particles = [];
-        //
-        text = new Text({
-          copy: 'Jello you are jike'
-        });
-        logo = new Img("./img/nike.png")
-
-        canvas.addEventListener('click', e => {
-          const x = e.clientX;
-          const y = e.clientY;
-          laser.push(new Laser({
-            x: x,
-            y: y
-          }));
-
-          particles.push(new Particles({
-            x: x,
-            y: y
-          }));
-
-        });
-        //
-        loop();
-      })();
+      laserCanvas = document.getElementById('laserCanvas');
+      input = document.getElementById('input');
+      ctx = laserCanvas.getContext('2d');
+      w = window.innerWidth;
+      h = window.innerHeight;
+      laserCanvas.width = w;
+      laserCanvas.height = h;
+      laser = [];
+      particles = [];
+      logo = new Img("./img/nike.png");
+      loop();
     })();
   </script>
 </body>
